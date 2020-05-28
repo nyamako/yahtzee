@@ -1,4 +1,8 @@
 import javafx.application.*;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.NumberBinding;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.stage.Stage;
 import javafx.event.*;
 import javafx.geometry.Insets;
@@ -135,6 +139,9 @@ public class YahtzeeGUI extends Application {
             dieBorder[i] = new Rectangle(100, 100, Color.TRANSPARENT);
             dieBorder[i].setStroke(Color.TRANSPARENT);
             dieBorder[i].setStrokeWidth(10);
+            //rounded corners
+            dieBorder[i].setArcHeight(10);
+            dieBorder[i].setArcWidth(10);
             rerollDie[i] = new Button();
             rerollDie[i].setPrefSize(100, 100);
             rerollDie[i].setStyle("-fx-background-color: transparent;");
@@ -187,51 +194,15 @@ public class YahtzeeGUI extends Application {
 
 
         // scale game with window size
-        scaledGame = new StackPane();
-        maxScale = Bindings.min(scaledGame.widthProperty().divide(700),
+        game.setMinSize(700, 750);
+        game.setMaxSize(700, 750);
+        StackPane scaledGame = new StackPane(game);
+        NumberBinding maxScale = Bindings.min(scaledGame.widthProperty().divide(700),
                                                 scaledGame.heightProperty().divide(750));
-        scale(game);
-        game.setVisible(false);
+        game.scaleXProperty().bind(maxScale);
+        game.scaleYProperty().bind(maxScale);
 
-
-        // initial screen - get number of players
-        title = new Text("Yahtzee!");
-        title.setFont(Font.font("Cantarell Extra Bold", 100));
-        howMany = new Text("How many players?");
-        howMany.setFont(new Font(24));
-        ObservableList<Integer> numberList = FXCollections.observableArrayList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-        numberChoice = new ComboBox<>(numberList);
-        numberChoice.setMinSize(100, 30);
-        setPlayers = new Button("Go!");
-        setPlayers.setFont(new Font(24));
-        setPlayers.setOnAction(this::handleSetPlayers);
-        setup = new VBox(title, howMany, numberChoice, setPlayers);
-        setup.setAlignment(Pos.CENTER);
-        setup.setSpacing(10);
-        scale(setup);
-
-        whoseTurn = new Text();
-        whoseTurn.setFont(new Font(48));
-        startTurn = new Button("Start Turn!");
-        startTurn.setFont(new Font(24));
-        startTurn.setOnAction(this::handleStartTurn);
-        startTurnScreen = new VBox(whoseTurn, startTurn);
-        startTurnScreen.setSpacing(20);
-        startTurnScreen.setAlignment(Pos.CENTER);
-        startTurnScreen.setVisible(false);
-        scale(startTurnScreen);
-
-        resultHeader = new Text("Final Scores");
-        resultHeader.setFont(new Font(48));
-        results = new VBox(resultHeader);
-        results.setAlignment(Pos.CENTER);
-        results.setSpacing(10);
-        results.setVisible(false);
-        scale(results);
-
-
-
-        Scene scene = new Scene(scaledGame,700, 750, Color.TRANSPARENT);
+        Scene scene = new Scene(scaledGame, 700, 750, Color.TRANSPARENT);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Yahtzee!");
         primaryStage.show();
@@ -252,6 +223,20 @@ public class YahtzeeGUI extends Application {
                 }
                 break;
             }
+        }
+
+        // Prevent rolling while all dice locked
+        boolean allLocked = true;
+        for(int i = 0; i < 5; i++) {
+            if(reroll[i]) {
+                allLocked = false;
+            }
+        }
+        if(allLocked) {
+            rollButton.setDisable(true);
+        }
+        else {
+            rollButton.setDisable(false);
         }
     }
 
@@ -274,6 +259,9 @@ public class YahtzeeGUI extends Application {
         }
         for(int i : validBoxes) {
             scoreButton[i].setDisable(false);
+        }
+        if(currentScoreBox != -1) {
+            score[currentScoreBox].setText(String.valueOf(player.scoreValue(currentScoreBox)));
         }
     }
 
