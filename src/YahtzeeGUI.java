@@ -21,7 +21,9 @@ import java.util.Objects;
 
 public class YahtzeeGUI extends Application {
 
-    Player player = new Player();
+    int numberOfPlayers = 1;
+    int currentPlayer;
+    Player[] player;
     boolean[] reroll = {true, true, true, true, true};
     Image lockImage = new Image("lock.png");
     Image unlockImage = new Image("unlock.png");
@@ -45,6 +47,7 @@ public class YahtzeeGUI extends Application {
     VBox LowerScores;
     HBox upperLower;
     VBox scoreSheet;
+    Text scoreSheetName;
 
     // DICE
     VBox[] dieVBox;
@@ -62,6 +65,34 @@ public class YahtzeeGUI extends Application {
 
     Button playAgain;
     StackPane buttonPane;
+
+    // title screen
+    Text title;
+    Text howMany;
+    ComboBox<Integer> numberChoice;
+    VBox setup;
+    Button setPlayers;
+
+    //player info screen
+    Text[] playerLabels;
+    TextField[] inputName;
+    String[] playerName;
+    HBox[] playerBox;
+    VBox allPlayers;
+    Button startButton;
+
+    // scaling
+    StackPane scaledGame;
+    NumberBinding maxScale;
+
+    VBox startTurnScreen;
+    Text whoseTurn;
+    Button startTurn;
+
+    // final scores screen
+    VBox results;
+    Text resultHeader;
+    Text[] finalScores;
 
     public void start(Stage primaryStage) {
 
@@ -185,7 +216,7 @@ public class YahtzeeGUI extends Application {
         playAgain.setVisible(false);
         playAgain.setOnAction(this::handleAgainButton);
 
-        buttonPane = new StackPane(buttonBox, playAgain);
+        buttonPane = new StackPane(buttonBox);
         buttonPane.setAlignment(Pos.BOTTOM_CENTER);
 
         game = new VBox(scoreSheet, dice, buttonPane);
@@ -194,15 +225,51 @@ public class YahtzeeGUI extends Application {
 
 
         // scale game with window size
-        game.setMinSize(700, 750);
-        game.setMaxSize(700, 750);
-        StackPane scaledGame = new StackPane(game);
-        NumberBinding maxScale = Bindings.min(scaledGame.widthProperty().divide(700),
+        scaledGame = new StackPane();
+        maxScale = Bindings.min(scaledGame.widthProperty().divide(700),
                                                 scaledGame.heightProperty().divide(750));
-        game.scaleXProperty().bind(maxScale);
-        game.scaleYProperty().bind(maxScale);
+        scale(game);
+        game.setVisible(false);
 
-        Scene scene = new Scene(scaledGame, 700, 750, Color.TRANSPARENT);
+
+        // initial screen - get number of players
+        title = new Text("Yahtzee!");
+        title.setFont(Font.font("Cantrell Extra Bold", 100));
+        howMany = new Text("How many players?");
+        howMany.setFont(new Font(24));
+        ObservableList<Integer> numberList = FXCollections.observableArrayList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        numberChoice = new ComboBox<>(numberList);
+        numberChoice.setMinSize(100, 30);
+        setPlayers = new Button("Go!");
+        setPlayers.setFont(new Font(24));
+        setPlayers.setOnAction(this::handleSetPlayers);
+        setup = new VBox(title, howMany, numberChoice, setPlayers);
+        setup.setAlignment(Pos.CENTER);
+        setup.setSpacing(10);
+        scale(setup);
+
+        whoseTurn = new Text();
+        whoseTurn.setFont(new Font(48));
+        startTurn = new Button("Start Turn!");
+        startTurn.setFont(new Font(24));
+        startTurn.setOnAction(this::handleStartTurn);
+        startTurnScreen = new VBox(whoseTurn, startTurn);
+        startTurnScreen.setSpacing(20);
+        startTurnScreen.setAlignment(Pos.CENTER);
+        startTurnScreen.setVisible(false);
+        scale(startTurnScreen);
+
+        resultHeader = new Text("Final Scores");
+        resultHeader.setFont(new Font(48));
+        results = new VBox(resultHeader);
+        results.setAlignment(Pos.CENTER);
+        results.setSpacing(10);
+        results.setVisible(false);
+        scale(results);
+
+
+
+        Scene scene = new Scene(scaledGame,700, 750, Color.TRANSPARENT);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Yahtzee!");
         primaryStage.show();
@@ -242,11 +309,11 @@ public class YahtzeeGUI extends Application {
 
 
     private void handleRollButton(ActionEvent event) {
-        player.roll(reroll);
+        player[currentPlayer].roll(reroll);
         for(int i = 0; i < 5; i++) {
-            diePic[i].setImage(diceImage[player.getDice()[i]]);
+            diePic[i].setImage(diceImage[player[currentPlayer].getDice()[i]]);
         }
-        if(player.outOfRolls()) {
+        if(player[currentPlayer].outOfRolls()) {
             for(int i = 0; i < 5; i++) {
                 rerollDie[i].setDisable(true);
                 rollButton.setDisable(true);
@@ -258,10 +325,12 @@ public class YahtzeeGUI extends Application {
             }
         }
         for(int i : validBoxes) {
+            // enable valid boxes that have not already been scored
+            if(player[currentPlayer].getScore()[i] == null)
             scoreButton[i].setDisable(false);
         }
         if(currentScoreBox != -1) {
-            score[currentScoreBox].setText(String.valueOf(player.scoreValue(currentScoreBox)));
+            score[currentScoreBox].setText(String.valueOf(player[currentPlayer].scoreValue(currentScoreBox)));
         }
     }
 
@@ -276,7 +345,7 @@ public class YahtzeeGUI extends Application {
                 if(i != currentScoreBox) {
                     currentScoreBox = i;
                     scoreBorder[i].setFill(Color.PALEGOLDENROD);
-                    score[i].setText(Integer.toString(player.scoreValue(i)));
+                    score[i].setText(Integer.toString(player[currentPlayer].scoreValue(i)));
                     scoreRollButton.setDisable(false);
                     break;
                 }
@@ -291,22 +360,25 @@ public class YahtzeeGUI extends Application {
 
 
     public void handleScoreButton(ActionEvent event) {
-        player.enterScore(currentScoreBox);
+        player[currentPlayer].enterScore(currentScoreBox);
         scoreBorder[currentScoreBox].setFill(Color.TRANSPARENT);
         scoreButton[currentScoreBox].setDisable(true);
-        validBoxes.remove(Integer.valueOf(currentScoreBox));
         currentScoreBox = -1;
-        for(int i : Arrays.asList(6, 7, 8, 15, 17, 18)) {
-            score[i].setText(Objects.toString(player.getScore()[i], ""));
-        }
         scoreRollButton.setDisable(true);
-        if(!player.gameOver()) {
+        // game not over - keep going
+        if(!player[player.length - 1].gameOver()) {
             rollButton.setDisable(false);
         }
-        else {
-            rollButton.setVisible(false);
-            scoreRollButton.setVisible(false);
+        // game over, one player
+        else if(numberOfPlayers == 1) {
+            buttonBox.setVisible(false);
             playAgain.setVisible(true);
+        }
+        // game over, multiple players
+        else {
+            game.setVisible(false);
+            showResults();
+            results.setVisible(true);
         }
         for(int i = 0; i < 5; i++) {
             reroll[i] = true;
@@ -317,23 +389,128 @@ public class YahtzeeGUI extends Application {
         for(int i : validBoxes) {
             scoreButton[i].setDisable(true);
         }
+        if(numberOfPlayers == 1) {
+            for (int i : Arrays.asList(6, 7, 8, 15, 17, 18)) {
+                score[i].setText(Objects.toString(player[currentPlayer].getScore()[i], ""));
+            }
+        }
+        else if(numberOfPlayers > 1 && !player[numberOfPlayers - 1].gameOver()) {
+            currentPlayer = (currentPlayer + 1) % numberOfPlayers;
+            game.setVisible(false);
+            whoseTurn.setText(playerName[currentPlayer] + "'s Turn!");
+            startTurnScreen.setVisible(true);
+        }
     }
 
 
     public void handleAgainButton(ActionEvent event) {
-        player.reset();
-        reroll = new boolean[]{true, true, true, true, true};
-        currentScoreBox = -1;
-        validBoxes = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 16));
         for(int i = 0; i < 19; i++) {
             score[i].setText("");
         }
-        rollButton.setVisible(true);
+        if(numberOfPlayers > 1) {
+            game.getChildren().remove(scoreSheetName);
+        }
+        currentPlayer = 0;
+        game.setVisible(false);
+        results.setVisible(false);
+        setup.setVisible(true);
         rollButton.setDisable(false);
-        scoreRollButton.setVisible(true);
-        playAgain.setVisible(false);
-
+        ((Pane) playAgain.getParent()).getChildren().remove(playAgain);
     }
+
+
+    public void handleSetPlayers(ActionEvent event) {
+        if(numberChoice.getValue() != null) {
+            setup.setVisible(false);
+            numberOfPlayers = numberChoice.getValue();
+            player = new Player[numberOfPlayers];
+            if (numberOfPlayers == 1) {
+                buttonPane.getChildren().add(playAgain);
+                playAgain.setVisible(false);
+                buttonBox.setVisible(true);
+                player[0] = new Player();
+                game.setVisible(true);
+                return;
+            }
+            playerLabels = new Text[numberOfPlayers];
+            inputName = new TextField[numberOfPlayers];
+            playerName = new String[numberOfPlayers];
+            playerBox = new HBox[numberOfPlayers];
+            finalScores = new Text[numberOfPlayers];
+            allPlayers = new VBox();
+            scoreSheetName = new Text();
+            scoreSheetName.setFont(new Font(24));
+            for (int i = 0; i < numberOfPlayers; i++) {
+                player[i] = new Player();
+                playerLabels[i] = new Text("Player " + (i + 1) + "'s name: ");
+                playerLabels[i].setFont(new Font(24));
+                inputName[i] = new TextField();
+                playerBox[i] = new HBox(playerLabels[i], inputName[i]);
+                playerBox[i].setAlignment(Pos.CENTER);
+                allPlayers.getChildren().add(playerBox[i]);
+            }
+
+            startButton = new Button();
+            startButton.setText("Start!");
+            startButton.setFont(new Font(24));
+            startButton.setOnAction(this::handleStartButton);
+
+            allPlayers.getChildren().add(startButton);
+            allPlayers.setAlignment(Pos.CENTER);
+            allPlayers.setSpacing(5.0);
+            scale(allPlayers);
+
+            buttonBox.setPadding(new Insets(20, 0, 20, 0));
+
+            game.getChildren().add(0, scoreSheetName);
+        }
+    }
+
+
+    public void handleStartButton(ActionEvent event) {
+        for(int i = 0; i < numberOfPlayers; i++) {
+            playerName[i] = inputName[i].getText();
+        }
+        allPlayers.setVisible(false);
+        buttonBox.setVisible(true);
+        buttonPane.setVisible(true);
+        whoseTurn.setText(playerName[currentPlayer] + "'s turn!");
+        startTurnScreen.setVisible(true);
+    }
+
+
+    public void handleStartTurn(ActionEvent event) {
+        startTurnScreen.setVisible(false);
+        scoreSheetName.setText(playerName[currentPlayer] + "'s Score Sheet");
+        game.setVisible(true);
+        for(int i = 0; i < 19; i++) {
+            score[i].setText(Objects.toString(player[currentPlayer].getScore()[i], ""));
+        }
+    }
+
+
+    // allow panes to resize with window
+    public void scale(Pane p) {
+        p.setMinSize(700, 750);
+        p.setMaxSize(700, 750);
+        p.scaleXProperty().bind(maxScale);
+        p.scaleYProperty().bind(maxScale);
+        scaledGame.getChildren().add(p);
+    }
+
+    public void showResults() {
+        results.getChildren().clear();
+        results.getChildren().add(resultHeader);
+        for(int i = 0; i < numberOfPlayers; i++){
+            finalScores[i] = new Text(playerName[i] + ": " + player[i].getScore()[18] + " points");
+            finalScores[i].setFont(new Font(24));
+            results.getChildren().add(finalScores[i]);
+        }
+        results.getChildren().add(playAgain);
+        playAgain.setVisible(true);
+    }
+
+
 
 
     public static void main(String[] args) {
