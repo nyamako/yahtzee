@@ -14,6 +14,10 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.scene.text.*;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -295,16 +299,12 @@ public class YahtzeeGUI extends Application {
         // Prevent rolling while all dice locked
         boolean allLocked = true;
         for(int i = 0; i < 5; i++) {
-            if(reroll[i]) {
+            if (reroll[i]) {
                 allLocked = false;
+                break;
             }
         }
-        if(allLocked) {
-            rollButton.setDisable(true);
-        }
-        else {
-            rollButton.setDisable(false);
-        }
+        rollButton.setDisable(allLocked);
     }
 
 
@@ -373,12 +373,14 @@ public class YahtzeeGUI extends Application {
         else if(numberOfPlayers == 1) {
             buttonBox.setVisible(false);
             playAgain.setVisible(true);
+            saveScores();
         }
         // game over, multiple players
         else {
             game.setVisible(false);
             showResults();
             results.setVisible(true);
+            saveScores();
         }
         for(int i = 0; i < 5; i++) {
             reroll[i] = true;
@@ -508,6 +510,30 @@ public class YahtzeeGUI extends Application {
         }
         results.getChildren().add(playAgain);
         playAgain.setVisible(true);
+    }
+
+    // clean this up later....
+    public void saveScores() {
+        try {
+            PrintWriter out = new PrintWriter(new FileOutputStream("scores.csv", true));
+            List<String> scoreStrings = new ArrayList<>();
+            for(Player p : player) {
+                for(Integer i : p.getScore()) {
+                    if(i != null) {
+                        scoreStrings.add(String.valueOf(i));
+                    }
+                    else {
+                        scoreStrings.add("0");
+                    }
+                }
+                out.println(String.join(",", scoreStrings));
+                scoreStrings.clear();
+            }
+            out.close();
+        }
+        catch (IOException e) {
+            System.out.println(e.toString());
+        }
     }
 
 
