@@ -45,19 +45,19 @@ public class Player {
     }
 
     public void roll() {
-        if(rollCount < 3) {
+        if (rollCount < 3) {
             Random rand = new Random();
-            for(int i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++) {
                 dice[i] = rand.nextInt(6) + 1;
             }
         }
     }
 
-    public void roll(boolean[] reroll ) {
-        if(!outOfRolls()) {
+    public void roll(boolean[] reroll) {
+        if (!outOfRolls()) {
             Random rand = new Random();
             for (int i = 0; i < 5; i++) {
-                if(reroll[i]) {
+                if (reroll[i]) {
                     dice[i] = rand.nextInt(6) + 1;
                 }
             }
@@ -82,27 +82,38 @@ public class Player {
     }
 
     public void printRoll() {
-        for(int die : dice) {
+        for (int die : dice) {
             System.out.print(die);
         }
         System.out.println();
     }
 
     public void printScores() {
-        for(int i = 0; i < 19; i++) {
+        for (int i = 0; i < 19; i++) {
             System.out.println(i + ": " + categories[i] + ":\t" + (scorecard[i] != null ? scorecard[i] : ""));
         }
     }
 
     public Integer scoreValue(int index) {
-        if(index < 0 || index > 16) {
+        if (index < 0 || index > 16) {
             throw new IllegalArgumentException("Invalid index: " + index);
         }
-        if(scorecard[index] != null) {
+        if (scorecard[index] != null) {
             throw new IllegalArgumentException("Index " + index + " already scored.");
         }
+        /* JAVA 14
+        scorecard[index] = switch(index) {
+            case 0, 1, 2, 3, 4, 5 -> scoreTopHalf(index + 1);
+            case 9, 10 -> scoreOfAKind(index - 6);
+            case 11 -> scoreFullHouse();
+            case 12, 13 -> scoreStraight(index - 8);
+            case 14 -> scoreYahtzee();
+            case 16 -> sumDice();
+            default -> throw new IllegalArgumentException("Invalid index: " + index);
+        };
+        */
         int value;
-        switch(index) {
+        switch (index) {
             case 0:
             case 1:
             case 2:
@@ -135,26 +146,15 @@ public class Player {
     }
 
     public void enterScore(int index) throws IllegalArgumentException {
-        if(index < 0 || index > 16) {
+        if (index < 0 || index > 16) {
             throw new IllegalArgumentException("Invalid index: " + index);
         }
-        if(scorecard[index] != null) {
+        if (scorecard[index] != null) {
             throw new IllegalArgumentException("Index " + index + " already scored.");
         }
-        /* JAVA 14
-        scorecard[index] = switch(index) {
-            case 0, 1, 2, 3, 4, 5 -> scoreTopHalf(index + 1);
-            case 9, 10 -> scoreOfAKind(index - 6);
-            case 11 -> scoreFullHouse();
-            case 12, 13 -> scoreStraight(index - 8);
-            case 14 -> scoreYahtzee();
-            case 16 -> sumDice();
-            default -> throw new IllegalArgumentException("Invalid index: " + index);
-        };
-        */
         scorecard[index] = scoreValue(index);
         // Check for Bonus Yahtzees
-        if(index != 14 || scorecard[index] == 0) {
+        if (index != 14 || scorecard[index] == 0) {
             scoreBonusYahtzee();
         }
         //update totals
@@ -166,11 +166,10 @@ public class Player {
 
     private void updateTotals(int index) {
         // Update Upper Total
-        if(index < 6) {
-            if(scorecard[6] != null) {
+        if (index < 6) {
+            if (scorecard[6] != null) {
                 scorecard[6] += scorecard[index];
-            }
-            else {
+            } else {
                 scorecard[6] = scorecard[index];
             }
             // check upper bonus
@@ -179,10 +178,9 @@ public class Player {
         }
         // Update Lower Total
         else {
-            if(scorecard[17] != null) {
+            if (scorecard[17] != null) {
                 scorecard[17] += scorecard[index];
-            }
-            else {
+            } else {
                 scorecard[17] = scorecard[index];
             }
         }
@@ -194,8 +192,8 @@ public class Player {
     // takes int parameter for number to score
     private int scoreTopHalf(int i) {
         int total = 0;
-        for(int die : dice) {
-            if(die == i) {
+        for (int die : dice) {
+            if (die == i) {
                 total += i;
             }
         }
@@ -205,16 +203,15 @@ public class Player {
     private void scoreBonus() {
         boolean topFull = true;
         int sum = 0;
-        for(int i = 0; i < 6; i++) {
-            if(scorecard[i] == null) {
+        for (int i = 0; i < 6; i++) {
+            if (scorecard[i] == null) {
                 topFull = false;
             }
             sum += (scorecard[i] != null ? scorecard[i] : 0);
         }
-        if(!topFull && sum < 63) {
+        if (!topFull && sum < 63) {
             scorecard[7] = null;
-        }
-        else {
+        } else {
             // Top Section full or sum >= 63
             scorecard[7] = (sum >= 63 ? 35 : 0);
         }
@@ -222,7 +219,7 @@ public class Player {
 
     private int sumDice() {
         int total = 0;
-        for(int die : dice) {
+        for (int die : dice) {
             total += die;
         }
         return total;
@@ -230,7 +227,7 @@ public class Player {
 
     private int[] diceCounts() {
         int[] counts = {0, 0, 0, 0, 0, 0};
-        for(int die : dice) {
+        for (int die : dice) {
             // number on die - 1 = index
             counts[die - 1] += 1;
         }
@@ -240,8 +237,8 @@ public class Player {
 
     // takes int parameter n for number of matching dice
     private boolean isOfAKind(int n) {
-        for(int i : diceCounts()) {
-            if( i >= n) {
+        for (int i : diceCounts()) {
+            if (i >= n) {
                 return true;
             }
         }
@@ -258,14 +255,12 @@ public class Player {
 
     private void scoreBonusYahtzee() {
         // add 100 if roll is yahtzee and first yahtzee already filled in
-        if(scorecard[14] != null && scorecard[14] == 0) {
+        if (scorecard[14] != null && scorecard[14] == 0) {
             scorecard[15] = 0;
-        }
-        else if (isOfAKind(5) && scorecard[14] == 50) {
-            if(scorecard[15] == null) {
+        } else if (isOfAKind(5) && scorecard[14] == 50) {
+            if (scorecard[15] == null) {
                 scorecard[15] = 100;
-            }
-            else {
+            } else {
                 scorecard[15] += 100;
             }
             // Update Lower Total
@@ -274,9 +269,9 @@ public class Player {
     }
 
     private boolean isFullHouse() {
-        for(int i : diceCounts()) {
+        for (int i : diceCounts()) {
             // if any number appears exactly once (yahtzee counts as full house)
-            if(i == 1) {
+            if (i == 1) {
                 return false;
             }
         }
@@ -290,14 +285,13 @@ public class Player {
     private boolean isStraight(int size) {
         int consecutiveCount = 0;
         int[] counts = diceCounts();
-        for(int i = 0; i < 6; i++) {
-            if(counts[i] != 0) {
+        for (int i = 0; i < 6; i++) {
+            if (counts[i] != 0) {
                 consecutiveCount++;
-            }
-            else {
+            } else {
                 consecutiveCount = 0;
             }
-            if(consecutiveCount >= size) {
+            if (consecutiveCount >= size) {
                 return true;
             }
         }
@@ -307,73 +301,5 @@ public class Player {
     private int scoreStraight(int n) {
         return (isStraight(n) ? ((n - 1) * 10) : 0);
     }
-
-
-    /*
-    public boolean isLargeStraight() {
-        int[] counts = diceCounts();
-        // true if all numbers unique (no 2 of kind) and 1 or 6 is missing
-        return !isOfAKind(2) && (counts[0] == 0 || counts[5] == 0);
-    }
-    */
-
-    /*
-    private int scoreLargeStraight() {
-        return (isStraight(5) ? 40 : 0);
-    }
-
-    private int scoreSmallStraight() {
-        return (isStraight(4) ? 30 : 0);
-    }
-     */
-
-
 }
-    /*
-    public void enterScore(int index) {
-        if (index >= 0 && index <= 5) {
-            // Score number
-            scorecard[index] = scoreTopHalf(index + 1);
-            // Update total
-            scorecard[6] += scorecard[index];
-            // Score Bonus
-            scorecard[7] = scoreBonus();
-            // Update Upper Total
-            if (scorecard[7] != null) {
-                scorecard[8] = scorecard[7] + scorecard[6];
-            }
-            // Update Grand Total
-            scorecard[18] = scorecard[8] + scorecard[17];
-        }
-        else if(index == 9 || index == 10) {
-            // 3 or 4 of kind
-            scorecard[index] = scoreOfAKind(index - 6);
-            // Update Lower Total
-            scorecard[17] += scorecard[index];
-            // Update Grand Total
-            scorecard[18] = scorecard[8] + scorecard[17];
-        }
 
-    }
-     */
-        /* original ofakind
-        int count = 0;
-        // if not found by (6-n)th die, not enough dice left
-        for(int i = 0; i < (6 - n); i++) {
-            // starting from i because all previous dice have not met criteria
-            for(int j = i; j < 5; j++) {
-                // count number of dice equal to die i
-                if(dice[i] == dice[j]) {
-                    count++;
-                    if(count >= n) {
-                        // at least n matching dice
-                        return true;
-                    }
-                }
-            }
-            // examined all dice and found fewer than 3 equal to dice[i] - reset count
-            count = 0;
-        }
-        // no three of a kind
-        return false;
-        */

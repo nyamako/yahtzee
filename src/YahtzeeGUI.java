@@ -25,9 +25,9 @@ import java.util.Objects;
 
 public class YahtzeeGUI extends Application {
 
-    int numberOfPlayers = 1;
+    int numberOfPlayers;
     int currentPlayer;
-    Player[] player;
+    Player[] players;
     boolean[] reroll = {true, true, true, true, true};
     Image lockImage = new Image("lock.png");
     Image unlockImage = new Image("unlock.png");
@@ -47,8 +47,8 @@ public class YahtzeeGUI extends Application {
     Button[] scoreButton;
     StackPane[] scoreRowPane;
 
-    VBox UpperScores;
-    VBox LowerScores;
+    VBox upperScores;
+    VBox lowerScores;
     HBox upperLower;
     VBox scoreSheet;
     Text scoreSheetName;
@@ -99,7 +99,79 @@ public class YahtzeeGUI extends Application {
     Text[] finalScores;
 
     public void start(Stage primaryStage) {
+        // scale game with window size
+        scaledGame = new StackPane();
+        maxScale = Bindings.min(scaledGame.widthProperty().divide(700),
+                                                scaledGame.heightProperty().divide(750));
 
+        // Set up different screens
+        setupMain();
+        setupNames();
+        setupStartTurn();
+        setupResults();
+        setupGame();
+
+        Scene scene = new Scene(scaledGame,700, 750, Color.TRANSPARENT);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Yahtzee!");
+        primaryStage.show();
+    }
+    private void setupMain() {
+        // initial screen - get number of players
+        title = new Text("Yahtzee!");
+        title.setFont(Font.font("Cantarell Extra Bold", 100));
+        howMany = new Text("How many players?");
+        howMany.setFont(new Font(24));
+        ObservableList<Integer> numberList = FXCollections.observableArrayList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        numberChoice = new ComboBox<>(numberList);
+        numberChoice.setMinSize(100, 30);
+        setPlayers = new Button("Go!");
+        setPlayers.setFont(new Font(24));
+        setPlayers.setOnAction(this::handleSetPlayers);
+        setup = new VBox(title, howMany, numberChoice, setPlayers);
+        setup.setAlignment(Pos.CENTER);
+        setup.setSpacing(10);
+        scale(setup);
+    }
+
+    private void setupNames() {
+        // Player name screen
+        allPlayers = new VBox();
+        allPlayers.setVisible(false);
+        allPlayers.setAlignment(Pos.CENTER);
+        allPlayers.setSpacing(5.0);
+        startButton = new Button();
+        startButton.setText("Start!");
+        startButton.setFont(new Font(24));
+        startButton.setOnAction(this::handleStartButton);
+        allPlayers.getChildren().add(startButton);
+        scale(allPlayers);
+    }
+
+    private void setupStartTurn() {
+        whoseTurn = new Text();
+        whoseTurn.setFont(new Font(48));
+        startTurn = new Button("Start Turn!");
+        startTurn.setFont(new Font(24));
+        startTurn.setOnAction(this::handleStartTurn);
+        startTurnScreen = new VBox(whoseTurn, startTurn);
+        startTurnScreen.setSpacing(20);
+        startTurnScreen.setAlignment(Pos.CENTER);
+        startTurnScreen.setVisible(false);
+        scale(startTurnScreen);
+    }
+
+    private void setupResults() {
+        resultHeader = new Text("Final Scores");
+        resultHeader.setFont(new Font(48));
+        results = new VBox(resultHeader);
+        results.setAlignment(Pos.CENTER);
+        results.setSpacing(10);
+        results.setVisible(false);
+        scale(results);
+    }
+
+    private void setupScoreSheet(){
         // SCORES
         scoreType = new Text[19];
         score = new Text[19];
@@ -138,25 +210,26 @@ public class YahtzeeGUI extends Application {
             scoreRowPane[i] = new StackPane(scoreRow[i], scoreButton[i]);
         }
 
-        UpperScores = new VBox();
+        upperScores = new VBox();
         for(int i = 0; i < 9; i++) {
-            UpperScores.getChildren().add(scoreRowPane[i]);
+            upperScores.getChildren().add(scoreRowPane[i]);
         }
 
-        LowerScores = new VBox();
+        lowerScores = new VBox();
         for(int i = 9; i < 18; i++) {
-            LowerScores.getChildren().add(scoreRowPane[i]);
+            lowerScores.getChildren().add(scoreRowPane[i]);
         }
 
-        upperLower = new HBox(UpperScores, LowerScores);
+        upperLower = new HBox(upperScores, lowerScores);
         upperLower.setAlignment(Pos.CENTER);
         upperLower.setSpacing(20);
 
         scoreRow[18].setAlignment(Pos.CENTER);
         scoreSheet = new VBox(upperLower, scoreRowPane[18]);
         scoreSheet.setSpacing(2);
+    }
 
-
+    private void setupDice() {
         // DICE
         dieVBox = new VBox[5];
         diePane = new StackPane[5];
@@ -193,8 +266,11 @@ public class YahtzeeGUI extends Application {
         dice = new HBox(dieVBox[0], dieVBox[1], dieVBox[2], dieVBox[3], dieVBox[4]);
         dice.setAlignment(Pos.CENTER);
         dice.setSpacing(5);
+    }
 
-
+    private void setupGame() {
+        setupScoreSheet();
+        setupDice();
         rollButton = new Button();
         rollButton.setText("Roll!");
         rollButton.setPrefSize(150, 40);
@@ -226,61 +302,12 @@ public class YahtzeeGUI extends Application {
         game = new VBox(scoreSheet, dice, buttonPane);
         game.setSpacing(10);
         game.setAlignment(Pos.CENTER);
-
-
-        // scale game with window size
-        scaledGame = new StackPane();
-        maxScale = Bindings.min(scaledGame.widthProperty().divide(700),
-                                                scaledGame.heightProperty().divide(750));
-        scale(game);
         game.setVisible(false);
-
-
-        // initial screen - get number of players
-        title = new Text("Yahtzee!");
-        title.setFont(Font.font("Cantrell Extra Bold", 100));
-        howMany = new Text("How many players?");
-        howMany.setFont(new Font(24));
-        ObservableList<Integer> numberList = FXCollections.observableArrayList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-        numberChoice = new ComboBox<>(numberList);
-        numberChoice.setMinSize(100, 30);
-        setPlayers = new Button("Go!");
-        setPlayers.setFont(new Font(24));
-        setPlayers.setOnAction(this::handleSetPlayers);
-        setup = new VBox(title, howMany, numberChoice, setPlayers);
-        setup.setAlignment(Pos.CENTER);
-        setup.setSpacing(10);
-        scale(setup);
-
-        whoseTurn = new Text();
-        whoseTurn.setFont(new Font(48));
-        startTurn = new Button("Start Turn!");
-        startTurn.setFont(new Font(24));
-        startTurn.setOnAction(this::handleStartTurn);
-        startTurnScreen = new VBox(whoseTurn, startTurn);
-        startTurnScreen.setSpacing(20);
-        startTurnScreen.setAlignment(Pos.CENTER);
-        startTurnScreen.setVisible(false);
-        scale(startTurnScreen);
-
-        resultHeader = new Text("Final Scores");
-        resultHeader.setFont(new Font(48));
-        results = new VBox(resultHeader);
-        results.setAlignment(Pos.CENTER);
-        results.setSpacing(10);
-        results.setVisible(false);
-        scale(results);
-
-
-
-        Scene scene = new Scene(scaledGame,700, 750, Color.TRANSPARENT);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("Yahtzee!");
-        primaryStage.show();
+        scale(game);
     }
 
 
-    private void handleLockButton(ActionEvent event) {
+    public void handleLockButton(ActionEvent event) {
         for(int i = 0; i < 5; i++) {
             if(event.getSource() == rerollDie[i]) {
                 reroll[i] = !reroll[i];
@@ -308,12 +335,12 @@ public class YahtzeeGUI extends Application {
     }
 
 
-    private void handleRollButton(ActionEvent event) {
-        player[currentPlayer].roll(reroll);
+    public void handleRollButton(ActionEvent event) {
+        players[currentPlayer].roll(reroll);
         for(int i = 0; i < 5; i++) {
-            diePic[i].setImage(diceImage[player[currentPlayer].getDice()[i]]);
+            diePic[i].setImage(diceImage[players[currentPlayer].getDice()[i]]);
         }
-        if(player[currentPlayer].outOfRolls()) {
+        if(players[currentPlayer].outOfRolls()) {
             for(int i = 0; i < 5; i++) {
                 rerollDie[i].setDisable(true);
                 rollButton.setDisable(true);
@@ -326,11 +353,11 @@ public class YahtzeeGUI extends Application {
         }
         for(int i : validBoxes) {
             // enable valid boxes that have not already been scored
-            if(player[currentPlayer].getScore()[i] == null)
+            if(players[currentPlayer].getScore()[i] == null)
             scoreButton[i].setDisable(false);
         }
         if(currentScoreBox != -1) {
-            score[currentScoreBox].setText(String.valueOf(player[currentPlayer].scoreValue(currentScoreBox)));
+            score[currentScoreBox].setText(String.valueOf(players[currentPlayer].scoreValue(currentScoreBox)));
         }
     }
 
@@ -345,7 +372,7 @@ public class YahtzeeGUI extends Application {
                 if(i != currentScoreBox) {
                     currentScoreBox = i;
                     scoreBorder[i].setFill(Color.PALEGOLDENROD);
-                    score[i].setText(Integer.toString(player[currentPlayer].scoreValue(i)));
+                    score[i].setText(Integer.toString(players[currentPlayer].scoreValue(i)));
                     scoreRollButton.setDisable(false);
                     break;
                 }
@@ -360,13 +387,13 @@ public class YahtzeeGUI extends Application {
 
 
     public void handleScoreButton(ActionEvent event) {
-        player[currentPlayer].enterScore(currentScoreBox);
+        players[currentPlayer].enterScore(currentScoreBox);
         scoreBorder[currentScoreBox].setFill(Color.TRANSPARENT);
         scoreButton[currentScoreBox].setDisable(true);
         currentScoreBox = -1;
         scoreRollButton.setDisable(true);
         // game not over - keep going
-        if(!player[player.length - 1].gameOver()) {
+        if(!players[players.length - 1].gameOver()) {
             rollButton.setDisable(false);
         }
         // game over, one player
@@ -377,9 +404,7 @@ public class YahtzeeGUI extends Application {
         }
         // game over, multiple players
         else {
-            game.setVisible(false);
             showResults();
-            results.setVisible(true);
             saveScores();
         }
         for(int i = 0; i < 5; i++) {
@@ -393,10 +418,10 @@ public class YahtzeeGUI extends Application {
         }
         if(numberOfPlayers == 1) {
             for (int i : Arrays.asList(6, 7, 8, 15, 17, 18)) {
-                score[i].setText(Objects.toString(player[currentPlayer].getScore()[i], ""));
+                score[i].setText(Objects.toString(players[currentPlayer].getScore()[i], ""));
             }
         }
-        else if(numberOfPlayers > 1 && !player[numberOfPlayers - 1].gameOver()) {
+        else if(numberOfPlayers > 1 && !players[numberOfPlayers - 1].gameOver()) {
             currentPlayer = (currentPlayer + 1) % numberOfPlayers;
             game.setVisible(false);
             whoseTurn.setText(playerName[currentPlayer] + "'s Turn!");
@@ -422,15 +447,15 @@ public class YahtzeeGUI extends Application {
 
 
     public void handleSetPlayers(ActionEvent event) {
+        setup.setVisible(false);
         if(numberChoice.getValue() != null) {
-            setup.setVisible(false);
             numberOfPlayers = numberChoice.getValue();
-            player = new Player[numberOfPlayers];
+            players = new Player[numberOfPlayers];
             if (numberOfPlayers == 1) {
                 buttonPane.getChildren().add(playAgain);
                 playAgain.setVisible(false);
                 buttonBox.setVisible(true);
-                player[0] = new Player();
+                players[0] = new Player();
                 game.setVisible(true);
                 return;
             }
@@ -439,11 +464,11 @@ public class YahtzeeGUI extends Application {
             playerName = new String[numberOfPlayers];
             playerBox = new HBox[numberOfPlayers];
             finalScores = new Text[numberOfPlayers];
-            allPlayers = new VBox();
             scoreSheetName = new Text();
             scoreSheetName.setFont(new Font(24));
+           allPlayers.getChildren().clear();
             for (int i = 0; i < numberOfPlayers; i++) {
-                player[i] = new Player();
+                players[i] = new Player();
                 playerLabels[i] = new Text("Player " + (i + 1) + "'s name: ");
                 playerLabels[i].setFont(new Font(24));
                 inputName[i] = new TextField();
@@ -451,21 +476,10 @@ public class YahtzeeGUI extends Application {
                 playerBox[i].setAlignment(Pos.CENTER);
                 allPlayers.getChildren().add(playerBox[i]);
             }
-
-            startButton = new Button();
-            startButton.setText("Start!");
-            startButton.setFont(new Font(24));
-            startButton.setOnAction(this::handleStartButton);
-
             allPlayers.getChildren().add(startButton);
-            allPlayers.setAlignment(Pos.CENTER);
-            allPlayers.setSpacing(5.0);
-            scale(allPlayers);
-
-            buttonBox.setPadding(new Insets(20, 0, 20, 0));
-
             game.getChildren().add(0, scoreSheetName);
         }
+        allPlayers.setVisible(true);
     }
 
 
@@ -486,7 +500,7 @@ public class YahtzeeGUI extends Application {
         scoreSheetName.setText(playerName[currentPlayer] + "'s Score Sheet");
         game.setVisible(true);
         for(int i = 0; i < 19; i++) {
-            score[i].setText(Objects.toString(player[currentPlayer].getScore()[i], ""));
+            score[i].setText(Objects.toString(players[currentPlayer].getScore()[i], ""));
         }
     }
 
@@ -501,30 +515,26 @@ public class YahtzeeGUI extends Application {
     }
 
     public void showResults() {
+        game.setVisible(false);
         results.getChildren().clear();
         results.getChildren().add(resultHeader);
         for(int i = 0; i < numberOfPlayers; i++){
-            finalScores[i] = new Text(playerName[i] + ": " + player[i].getScore()[18] + " points");
+            finalScores[i] = new Text(playerName[i] + ": " + players[i].getScore()[18] + " points");
             finalScores[i].setFont(new Font(24));
             results.getChildren().add(finalScores[i]);
         }
         results.getChildren().add(playAgain);
         playAgain.setVisible(true);
+        results.setVisible(true);
     }
 
-    // clean this up later....
     public void saveScores() {
         try {
             PrintWriter out = new PrintWriter(new FileOutputStream("scores.csv", true));
             List<String> scoreStrings = new ArrayList<>();
-            for(Player p : player) {
+            for(Player p : players) {
                 for(Integer i : p.getScore()) {
-                    if(i != null) {
-                        scoreStrings.add(String.valueOf(i));
-                    }
-                    else {
-                        scoreStrings.add("0");
-                    }
+                    scoreStrings.add(i != null ? String.valueOf(i) : "0");
                 }
                 out.println(String.join(",", scoreStrings));
                 scoreStrings.clear();
@@ -535,9 +545,6 @@ public class YahtzeeGUI extends Application {
             System.out.println(e.toString());
         }
     }
-
-
-
 
     public static void main(String[] args) {
         launch(args);
